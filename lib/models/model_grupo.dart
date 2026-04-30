@@ -9,7 +9,7 @@ class GrupoPermissionMap {
 
   factory GrupoPermissionMap.fromJson(Map<String, dynamic> json) {
     final global =
-        (json['global'] as List<dynamic>?)?.map((e) => e as int).toList() ??
+        (json['globalPerms'] as List<dynamic>?)?.map((e) => e as int).toList() ??
             [];
     final sections = <String, List<int>>{};
     if (json['sections'] != null) {
@@ -41,7 +41,7 @@ class Grupo {
       id: json['id'] as int? ?? 0,
       nombre: json['nombre'] as String? ?? '',
       dn: json['dn'] as String? ?? '',
-      superAdmin: json['superAdmin'] as bool? ?? false,
+      superAdmin: json['superadmin'] as bool? ?? false,
       permisos: json['permisos'] != null
           ? GrupoPermissionMap.fromJson(
               json['permisos'] as Map<String, dynamic>)

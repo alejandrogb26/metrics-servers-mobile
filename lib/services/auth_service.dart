@@ -12,4 +12,8 @@ class AuthService {
     });
     return LoginResponse.fromJson(data as Map<String, dynamic>);
   }
+
+  Future<void> logout() async {
+    await ApiService.instance.post('/auth/logout', {});
+  }
 }

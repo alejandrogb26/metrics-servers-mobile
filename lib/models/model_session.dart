@@ -16,7 +16,7 @@ class PermissionMap {
     // Las claves ya vienen como "AUDIT_USER", "AUDIT_SERV", etc.
     // Se normalizan a mayúsculas al parsear para no depender del servidor.
     final global =
-        (json['global'] as List<dynamic>?)
+        (json['globalPerms'] as List<dynamic>?)
             ?.map((e) => e.toString().toUpperCase())
             .toList() ??
         [];
@@ -64,7 +64,7 @@ class GrupoSession {
     return GrupoSession(
       id: json['id'] as int? ?? 0,
       nombre: json['nombre'] as String? ?? '',
-      superAdmin: json['superAdmin'] as bool? ?? false,
+      superAdmin: json['superadmin'] as bool? ?? false,
     );
   }
 }
@@ -87,11 +87,14 @@ class Session {
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
+    final grupoRaw = json['grupo'];
     return Session(
       username: json['username'] as String? ?? '',
       displayName: json['displayName'] as String? ?? '',
       email: json['email'] as String? ?? '',
-      grupo: GrupoSession.fromJson(json['grupo'] as Map<String, dynamic>),
+      grupo: grupoRaw is Map<String, dynamic>
+          ? GrupoSession.fromJson(grupoRaw)
+          : const GrupoSession(id: 0, nombre: '', superAdmin: false),
       permisos: PermissionMap.fromJson(
         json['permisos'] as Map<String, dynamic>? ?? {},
       ),

@@ -6,10 +6,13 @@ class GrupoService {
   static final GrupoService instance = GrupoService._();
 
   Future<List<Grupo>> getAll() async {
-    final data = await ApiService.instance.get('/grupos');
-    return (data as List<dynamic>)
-        .map((e) => Grupo.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final raw = await ApiService.instance.get(
+      '/grupos',
+      query: {'page': '0', 'size': '100'},
+    );
+    final map = raw as Map<String, dynamic>;
+    final items = map['data'] as List<dynamic>? ?? [];
+    return items.map((e) => Grupo.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<Grupo> getById(int id) async {

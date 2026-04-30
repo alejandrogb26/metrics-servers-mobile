@@ -36,7 +36,7 @@ class Servidor {
       kernel: json['kernel'] as String?,
       imagen: json['imagen'] as String?,
       imagenUrl: json['imagenUrl'] as String?,
-      seccion: json['seccion'] as int? ?? 0,
+      seccion: json['seccionId'] as int? ?? 0,
       servicios: (json['servicios'] as List<dynamic>?)
               ?.map((e) => e as int)
               .toList() ??

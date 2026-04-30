@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:metrics_servers_mobile/models/metrics/model_metrics.dart';
+import 'package:metrics_servers_mobile/services/api_service.dart';
 import 'package:metrics_servers_mobile/services/metrics_service.dart';
 
 class MetricsProvider with ChangeNotifier {
@@ -53,6 +54,14 @@ class MetricsProvider with ChangeNotifier {
         _currentServerId!,
         rangeMinutes: _rangeMinutes,
       );
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        // La sesión ya fue invalidada por ApiService.onUnauthorized;
+        // detenemos el polling sin mostrar error técnico al usuario.
+        stopPolling();
+        return;
+      }
+      _error = e.toString();
     } catch (e) {
       _error = e.toString();
     } finally {

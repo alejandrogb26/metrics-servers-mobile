@@ -20,7 +20,7 @@ class ApiService {
   ApiService._();
   static final ApiService instance = ApiService._();
 
-  String baseUrl = 'https://pfc-nginx.alejandrogb.local/metrics-servers/api';
+  String baseUrl = 'https://pfc-nginx.alejandrogb.local';
   String? _token;
 
   late final http.Client _client = _buildClient();
@@ -39,6 +39,10 @@ class ApiService {
 
   void setToken(String token) => _token = token;
   void clearToken() => _token = null;
+
+  /// Llamado una vez cuando cualquier petición recibe 401.
+  /// AuthProvider lo registra tras el login y lo borra al hacer logout.
+  void Function()? onUnauthorized;
 
   Map<String, String> get _headers {
     final headers = <String, String>{
@@ -138,8 +142,12 @@ class ApiService {
 
     try {
       final body = jsonDecode(response.body);
-      message = body['message'] ?? body['error'] ?? message;
+      message = body['message'] ?? body['detail'] ?? body['error'] ?? message;
     } catch (_) {}
+
+    if (response.statusCode == 401) {
+      onUnauthorized?.call();
+    }
 
     throw ApiException(statusCode: response.statusCode, message: message);
   }

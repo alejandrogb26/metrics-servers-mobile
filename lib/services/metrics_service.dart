@@ -9,7 +9,7 @@ class MetricsService {
       {int rangeMinutes = 60}) async {
     final data = await ApiService.instance.get(
       '/servidor/$serverId/metrics',
-      query: {'range': rangeMinutes.toString()},
+      query: {'minutes': rangeMinutes.toString()},
     );
     if (data == null) return [];
     return (data as List<dynamic>)

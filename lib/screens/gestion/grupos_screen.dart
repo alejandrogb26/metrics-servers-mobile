@@ -5,26 +5,49 @@ import 'package:metrics_servers_mobile/providers/grupo_provider.dart';
 import 'package:metrics_servers_mobile/routes/app_routes.dart';
 import 'package:provider/provider.dart';
 
-class GruposScreen extends StatelessWidget {
+class GruposScreen extends StatefulWidget {
   const GruposScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final grupoProvider = context.read<GrupoProvider>();
+  State<GruposScreen> createState() => _GruposScreenState();
+}
 
+class _GruposScreenState extends State<GruposScreen> {
+  late Future<void> _future;
+  late GrupoProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = context.read<GrupoProvider>();
+    _future = _provider.fetchAll();
+  }
+
+  void _retry() {
+    _provider.invalidate();
+    setState(() {
+      _future = _provider.fetchAll();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Gestión de grupos')),
       body: FutureBuilder(
-        future: grupoProvider.fetchAll(),
+        future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const AppLoadingWidget(message: 'Cargando grupos…');
           }
-          if (snapshot.hasError) {
-            return AppErrorWidget(message: snapshot.error.toString());
-          }
           return Consumer<GrupoProvider>(
-            builder: (_, provider, __) {
+            builder: (context, provider, _) {
+              if (provider.error != null) {
+                return AppErrorWidget(
+                  message: provider.error!,
+                  onRetry: _retry,
+                );
+              }
               final grupos = provider.grupos;
               if (grupos.isEmpty) {
                 return const EmptyStateWidget(
@@ -32,10 +55,13 @@ class GruposScreen extends StatelessWidget {
                   icon: Icons.group_outlined,
                 );
               }
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: grupos.length,
-                itemBuilder: (_, i) => _GrupoCard(grupo: grupos[i]),
+              return RefreshIndicator(
+                onRefresh: () async => _retry(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: grupos.length,
+                  itemBuilder: (_, i) => _GrupoCard(grupo: grupos[i]),
+                ),
               );
             },
           );
@@ -66,8 +92,8 @@ class _GrupoCard extends StatelessWidget {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: grupo.superAdmin
-                      ? const Color(0xFFE3B341).withOpacity(0.12)
-                      : const Color(0xFF1F6FEB).withOpacity(0.12),
+                      ? const Color(0xFFE3B341).withValues(alpha: 0.12)
+                      : const Color(0xFF1F6FEB).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -160,9 +186,9 @@ class _MiniChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(label,
           style: TextStyle(color: color, fontSize: 10)),

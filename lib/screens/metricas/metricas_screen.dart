@@ -201,7 +201,7 @@ class _RefreshIndicatorDotState extends State<_RefreshIndicatorDot>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) => Row(
+      builder: (context, _) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
@@ -391,7 +391,7 @@ class _ChartSectionHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(child: Divider(color: color.withOpacity(0.3))),
+          Expanded(child: Divider(color: color.withValues(alpha: 0.3))),
         ],
       ),
     );
@@ -492,7 +492,7 @@ class _LineChartCard extends StatelessWidget {
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: color.withOpacity(0.12),
+                        color: color.withValues(alpha: 0.12),
                       ),
                     ),
                   ],
@@ -655,7 +655,7 @@ class _DualLineChartCard extends StatelessWidget {
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: color1.withOpacity(0.08),
+                        color: color1.withValues(alpha: 0.08),
                       ),
                     ),
                     LineChartBarData(
@@ -666,7 +666,7 @@ class _DualLineChartCard extends StatelessWidget {
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: color2.withOpacity(0.08),
+                        color: color2.withValues(alpha: 0.08),
                       ),
                     ),
                   ],

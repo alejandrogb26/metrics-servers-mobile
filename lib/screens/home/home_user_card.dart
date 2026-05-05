@@ -144,7 +144,7 @@ class _UserAvatar extends StatelessWidget {
               width: 64,
               height: 64,
               fit: BoxFit.cover,
-              imageErrorBuilder: (_, __, ___) => _defaultAvatar(),
+              imageErrorBuilder: (context, error, _) => _defaultAvatar(),
             )
           : _defaultAvatar(),
     );

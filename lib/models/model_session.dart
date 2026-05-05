@@ -111,13 +111,6 @@ class Session {
     return permisos.hasGlobalPermission('AUDIT_USER');
   }
 
-  /// Ver servidores de una sección concreta: requiere AUDIT_SERV en esa sección.
-  /// El ámbito SERV es siempre por sección según el modelo de datos.
-  bool canViewServersInSection(String seccionId) {
-    if (isSuperAdmin) return true;
-    return permisos.hasSectionPermission(seccionId, 'AUDIT_SERV');
-  }
-
   /// Ver el menú/listado de servidores: basta con tener AUDIT_SERV en alguna sección.
   bool canViewAnyServer() {
     if (isSuperAdmin) return true;

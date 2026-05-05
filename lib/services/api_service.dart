@@ -61,34 +61,38 @@ class ApiService {
     final uri = Uri.parse('$baseUrl$path').replace(queryParameters: query);
 
     try {
-      debugPrint('GET -> $uri');
-      debugPrint('Headers -> $_headers');
+      if (kDebugMode) {
+        debugPrint('GET -> $uri');
+        debugPrint('Headers -> $_headers');
+      }
 
       final response = await _client
           .get(uri, headers: _headers)
           .timeout(const Duration(seconds: 15));
 
-      debugPrint('Status -> ${response.statusCode}');
-      debugPrint('Body -> ${response.body}');
+      if (kDebugMode) {
+        debugPrint('Status -> ${response.statusCode}');
+        debugPrint('Body -> ${response.body}');
+      }
 
       return _handle(response);
     } on SocketException catch (e) {
-      debugPrint('SocketException: $e');
+      if (kDebugMode) debugPrint('SocketException: $e');
       throw const ApiException(
         statusCode: 0,
         message: 'No se pudo alcanzar el servidor',
       );
     } on HandshakeException catch (e) {
-      debugPrint('HandshakeException: $e');
+      if (kDebugMode) debugPrint('HandshakeException: $e');
       throw const ApiException(statusCode: 0, message: 'Error SSL/TLS');
     } on TimeoutException catch (e) {
-      debugPrint('TimeoutException: $e');
+      if (kDebugMode) debugPrint('TimeoutException: $e');
       throw const ApiException(
         statusCode: 0,
         message: 'Tiempo de espera agotado',
       );
     } catch (e) {
-      debugPrint('Error inesperado GET: $e');
+      if (kDebugMode) debugPrint('Error inesperado GET: $e');
       throw ApiException(statusCode: 0, message: 'Error inesperado: $e');
     }
   }
@@ -97,35 +101,39 @@ class ApiService {
     final uri = Uri.parse('$baseUrl$path');
 
     try {
-      debugPrint('POST -> $uri');
-      debugPrint('Headers -> $_headers');
-      debugPrint('Body -> ${jsonEncode(body)}');
+      if (kDebugMode) {
+        debugPrint('POST -> $uri');
+        debugPrint('Headers -> $_headers');
+        debugPrint('Body -> ${jsonEncode(body)}');
+      }
 
       final response = await _client
           .post(uri, headers: _headers, body: jsonEncode(body))
           .timeout(const Duration(seconds: 15));
 
-      debugPrint('Status -> ${response.statusCode}');
-      debugPrint('Body -> ${response.body}');
+      if (kDebugMode) {
+        debugPrint('Status -> ${response.statusCode}');
+        debugPrint('Body -> ${response.body}');
+      }
 
       return _handle(response);
     } on SocketException catch (e) {
-      debugPrint('SocketException: $e');
+      if (kDebugMode) debugPrint('SocketException: $e');
       throw const ApiException(
         statusCode: 0,
         message: 'No se pudo alcanzar el servidor',
       );
     } on HandshakeException catch (e) {
-      debugPrint('HandshakeException: $e');
+      if (kDebugMode) debugPrint('HandshakeException: $e');
       throw const ApiException(statusCode: 0, message: 'Error SSL/TLS');
     } on TimeoutException catch (e) {
-      debugPrint('TimeoutException: $e');
+      if (kDebugMode) debugPrint('TimeoutException: $e');
       throw const ApiException(
         statusCode: 0,
         message: 'Tiempo de espera agotado',
       );
     } catch (e) {
-      debugPrint('Error inesperado POST: $e');
+      if (kDebugMode) debugPrint('Error inesperado POST: $e');
       throw ApiException(statusCode: 0, message: 'Error inesperado: $e');
     }
   }

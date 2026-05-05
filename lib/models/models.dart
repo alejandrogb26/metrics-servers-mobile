@@ -1,3 +1,4 @@
+export 'model_paged_response.dart';
 export 'model_session.dart';
 export 'model_servidor.dart';
 export 'model_servicio.dart';

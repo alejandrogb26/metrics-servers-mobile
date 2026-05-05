@@ -74,6 +74,4 @@ class AuthProvider with ChangeNotifier {
 
   bool canViewAnyServer() => _session?.canViewAnyServer() ?? false;
 
-  bool canViewServersInSection(String seccionId) =>
-      _session?.canViewServersInSection(seccionId) ?? false;
 }

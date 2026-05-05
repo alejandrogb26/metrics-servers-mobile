@@ -31,10 +31,10 @@ class DetalleServidorScreen extends StatelessWidget {
                 icon: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1F6FEB).withOpacity(0.2),
+                    color: const Color(0xFF1F6FEB).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xFF1F6FEB).withOpacity(0.5),
+                      color: const Color(0xFF1F6FEB).withValues(alpha: 0.5),
                     ),
                   ),
                   child: const Icon(
@@ -69,7 +69,7 @@ class DetalleServidorScreen extends StatelessWidget {
                       placeholder: 'assets/no_image.png',
                       image: servidor.imagenUrl!,
                       fit: BoxFit.cover,
-                      imageErrorBuilder: (_, __, ___) => _defaultBg(),
+                      imageErrorBuilder: (context, error, _) => _defaultBg(),
                     )
                   else
                     _defaultBg(),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:metrics_servers_mobile/providers/auth_provider.dart';
+import 'package:metrics_servers_mobile/providers/grupo_provider.dart';
+import 'package:metrics_servers_mobile/providers/servidor_provider.dart';
 import 'package:metrics_servers_mobile/routes/app_routes.dart';
 import 'package:metrics_servers_mobile/screens/home/home_user_card.dart';
 import 'package:provider/provider.dart';
@@ -63,7 +65,7 @@ class HomeScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(
                 'Panel de monitorización de servidores',
-                style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
               ),
             ),
             HomeUserCard(session: session),
@@ -240,6 +242,8 @@ class _AppDrawer extends StatelessWidget {
                     color: Colors.redAccent,
                     onTap: () {
                       Navigator.pop(context);
+                      context.read<ServidorProvider>().invalidate();
+                      context.read<GrupoProvider>().invalidate();
                       auth.logout();
                     },
                   ),
@@ -311,7 +315,7 @@ class _QuickAccessTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -354,9 +358,9 @@ class _NoAccessCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orangeAccent.withOpacity(0.08),
+        color: Colors.orangeAccent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
+        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.3)),
       ),
       child: const Row(
         children: [

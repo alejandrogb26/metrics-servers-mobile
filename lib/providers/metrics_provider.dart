@@ -61,9 +61,9 @@ class MetricsProvider with ChangeNotifier {
         stopPolling();
         return;
       }
-      _error = e.toString();
+      _error = e.message;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Error inesperado al cargar métricas';
     } finally {
       _loading = false;
       notifyListeners();

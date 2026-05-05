@@ -115,10 +115,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.redAccent.withOpacity(0.1),
+                            color: Colors.redAccent.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: Colors.redAccent.withOpacity(0.4),
+                              color: Colors.redAccent.withValues(alpha: 0.4),
                             ),
                           ),
                           child: Row(
@@ -189,7 +189,7 @@ class _Logo extends StatelessWidget {
         border: Border.all(color: const Color(0xFF30363D), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1F6FEB).withOpacity(0.3),
+            color: const Color(0xFF1F6FEB).withValues(alpha: 0.3),
             blurRadius: 24,
             spreadRadius: 2,
           ),

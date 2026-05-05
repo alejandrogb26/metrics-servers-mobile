@@ -3,7 +3,6 @@ import 'package:metrics_servers_mobile/core/widgets/shared_widgets.dart';
 import 'package:metrics_servers_mobile/models/model_seccion.dart';
 import 'package:metrics_servers_mobile/models/model_servicio.dart';
 import 'package:metrics_servers_mobile/models/model_servidor.dart';
-import 'package:metrics_servers_mobile/providers/auth_provider.dart';
 import 'package:metrics_servers_mobile/providers/servidor_provider.dart';
 import 'package:metrics_servers_mobile/routes/app_routes.dart';
 import 'package:metrics_servers_mobile/screens/servidores/busqueda_servidores.dart';
@@ -17,116 +16,152 @@ class ListaServidoresScreen extends StatefulWidget {
 }
 
 class _ListaServidoresScreenState extends State<ListaServidoresScreen> {
+  late final ScrollController _scrollController;
+
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final srv = context.read<ServidorProvider>();
       srv.preloadCaches();
-      // Si se pasa arguments: true, abrir búsqueda directamente
+      srv.loadFirstPage();
       final openSearch =
           ModalRoute.of(context)?.settings.arguments as bool? ?? false;
       if (openSearch) {
         showSearch(
           context: context,
-          delegate: ServidorSearchDelegate(
-            servidorProvider: context.read<ServidorProvider>(),
-          ),
+          delegate: ServidorSearchDelegate(servidorProvider: srv),
         );
       }
     });
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!mounted) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 300) {
+      context.read<ServidorProvider>().loadNextPage();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final auth = context.read<AuthProvider>();
-    final srvProvider = context.read<ServidorProvider>();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Servidores'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => showSearch(
-              context: context,
-              delegate: ServidorSearchDelegate(servidorProvider: srvProvider),
-            ),
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<Servidor>>(
-        future: srvProvider.fetchAll(auth),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const AppLoadingWidget(message: 'Cargando servidores…');
-          }
-          if (snapshot.hasError) {
-            return AppErrorWidget(
-              message: snapshot.error.toString(),
-              onRetry: () {
-                srvProvider.invalidate();
-                setState(() {});
-              },
-            );
-          }
-          final servidores = snapshot.data ?? [];
-          if (servidores.isEmpty) {
-            return const EmptyStateWidget(
-              message: 'No hay servidores disponibles',
-              icon: Icons.dns_outlined,
-            );
-          }
-
-          return Consumer<ServidorProvider>(
-            builder: (_, provider, __) {
-              // Agrupar servidores por sección manteniendo el orden de aparición
-              final grupos = <int, List<Servidor>>{};
-              for (final s in provider.servidores) {
-                grupos.putIfAbsent(s.seccion, () => []).add(s);
-              }
-
-              return RefreshIndicator(
-                onRefresh: () async {
-                  provider.invalidate();
-                  await provider.fetchAll(auth);
-                },
-                child: CustomScrollView(
-                  slivers: [
-                    for (final entry in grupos.entries) ...[
-                      // ── Cabecera de sección ──────────────────────────────
-                      SliverToBoxAdapter(
-                        child: _SeccionHeader(
-                          seccion: provider.seccionesCache[entry.key],
-                          count: entry.value.length,
-                        ),
-                      ),
-                      // ── Servidores de esa sección ────────────────────────
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (_, i) => ServidorCard(
-                            servidor: entry.value[i],
-                            serviciosCache: provider.serviciosCache,
-                            seccionesCache: provider.seccionesCache,
-                          ),
-                          childCount: entry.value.length,
-                        ),
-                      ),
-                    ],
-                    // Padding inferior
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                  ],
+    return Consumer<ServidorProvider>(
+      builder: (context, provider, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Servidores'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: () => showSearch(
+                  context: context,
+                  delegate:
+                      ServidorSearchDelegate(servidorProvider: provider),
                 ),
-              );
-            },
-          );
+              ),
+            ],
+          ),
+          body: _buildBody(context, provider),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(BuildContext context, ServidorProvider provider) {
+    if (provider.isLoading) {
+      return const AppLoadingWidget(message: 'Cargando servidores…');
+    }
+
+    if (provider.error != null && provider.servidores.isEmpty) {
+      return AppErrorWidget(
+        message: provider.error!,
+        onRetry: () {
+          provider.invalidate();
+          provider.loadFirstPage();
         },
+      );
+    }
+
+    if (provider.servidores.isEmpty) {
+      return const EmptyStateWidget(
+        message: 'No hay servidores disponibles',
+        icon: Icons.dns_outlined,
+      );
+    }
+
+    // Group by section preserving insertion order
+    final grupos = <int, List<Servidor>>{};
+    for (final s in provider.servidores) {
+      grupos.putIfAbsent(s.seccion, () => []).add(s);
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        provider.invalidate();
+        await provider.loadFirstPage();
+      },
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          for (final entry in grupos.entries) ...[
+            // ── Section header ─────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _SeccionHeader(
+                seccion: provider.seccionesCache[entry.key],
+                count: entry.value.length,
+              ),
+            ),
+            // ── Server cards for this section ──────────────────────────────
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (_, i) => ServidorCard(
+                  servidor: entry.value[i],
+                  serviciosCache: provider.serviciosCache,
+                  seccionesCache: provider.seccionesCache,
+                ),
+                childCount: entry.value.length,
+              ),
+            ),
+          ],
+
+          // ── Pagination footer ────────────────────────────────────────────
+          if (provider.isLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            )
+          else if (provider.hasNext)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: OutlinedButton(
+                  onPressed: () => provider.loadNextPage(),
+                  child: const Text('Cargar más'),
+                ),
+              ),
+            ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        ],
       ),
     );
   }
 }
 
-// ── Cabecera de sección ────────────────────────────────────────────────────────
+// ── Section header ─────────────────────────────────────────────────────────────
 class _SeccionHeader extends StatelessWidget {
   final Seccion? seccion;
   final int count;
@@ -162,9 +197,10 @@ class _SeccionHeader extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1F6FEB).withOpacity(0.12),
+                  color: const Color(0xFF1F6FEB).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -184,7 +220,8 @@ class _SeccionHeader extends StatelessWidget {
               padding: const EdgeInsets.only(left: 24),
               child: Text(
                 descripcion,
-                style: const TextStyle(color: Color(0xFF8B949E), fontSize: 12),
+                style:
+                    const TextStyle(color: Color(0xFF8B949E), fontSize: 12),
               ),
             ),
           ],
@@ -196,7 +233,7 @@ class _SeccionHeader extends StatelessWidget {
   }
 }
 
-// ── Tarjeta de servidor ────────────────────────────────────────────────────────
+// ── Server card ────────────────────────────────────────────────────────────────
 class ServidorCard extends StatelessWidget {
   final Servidor servidor;
   final Map<int, Servicio> serviciosCache;
@@ -224,7 +261,7 @@ class ServidorCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              // ── Imagen ─────────────────────────────────────────────────────
+              // ── Image ──────────────────────────────────────────────────────
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: ServerImage(

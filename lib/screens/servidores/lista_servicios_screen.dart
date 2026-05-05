@@ -5,27 +5,49 @@ import 'package:metrics_servers_mobile/models/model_servidor.dart';
 import 'package:metrics_servers_mobile/providers/servidor_provider.dart';
 import 'package:provider/provider.dart';
 
-class ListaServiciosScreen extends StatelessWidget {
+class ListaServiciosScreen extends StatefulWidget {
   const ListaServiciosScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final srvProvider = context.read<ServidorProvider>();
+  State<ListaServiciosScreen> createState() => _ListaServiciosScreenState();
+}
 
+class _ListaServiciosScreenState extends State<ListaServiciosScreen> {
+  late Future<void> _future;
+  late ServidorProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = context.read<ServidorProvider>();
+    _future = _provider.preloadCaches();
+  }
+
+  void _retry() {
+    setState(() {
+      _future = _provider.preloadCaches();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Servicios')),
       body: FutureBuilder(
-        future: srvProvider.preloadCaches(),
+        future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const AppLoadingWidget(message: 'Cargando servicios…');
           }
           if (snapshot.hasError) {
-            return AppErrorWidget(message: snapshot.error.toString());
+            return AppErrorWidget(
+              message: 'Error al cargar servicios',
+              onRetry: _retry,
+            );
           }
 
           return Consumer<ServidorProvider>(
-            builder: (_, provider, __) {
+            builder: (context, provider, _) {
               final servicios = provider.serviciosCache.values.toList()
                 ..sort((a, b) => a.nombre.compareTo(b.nombre));
 
@@ -36,12 +58,15 @@ class ListaServiciosScreen extends StatelessWidget {
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: servicios.length,
-                itemBuilder: (_, i) => _ServicioTile(
-                  servicio: servicios[i],
-                  servidoresCache: provider.servidores,
+              return RefreshIndicator(
+                onRefresh: () async => _retry(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: servicios.length,
+                  itemBuilder: (_, i) => _ServicioTile(
+                    servicio: servicios[i],
+                    servidoresCargados: provider.servidores,
+                  ),
                 ),
               );
             },
@@ -54,14 +79,17 @@ class ListaServiciosScreen extends StatelessWidget {
 
 class _ServicioTile extends StatelessWidget {
   final Servicio servicio;
-  final List<Servidor> servidoresCache;
+  final List<Servidor> servidoresCargados;
 
-  const _ServicioTile({required this.servicio, required this.servidoresCache});
+  const _ServicioTile({
+    required this.servicio,
+    required this.servidoresCargados,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Servidores que tienen este servicio
-    final servidoresConServicio = servidoresCache
+    // Servidores cargados que tienen este servicio (puede ser subconjunto del total)
+    final coincidentes = servidoresCargados
         .where((s) => s.servicios.contains(servicio.id))
         .toList();
 
@@ -91,21 +119,16 @@ class _ServicioTile extends StatelessWidget {
                       fontSize: 15,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  // Servidores que usan este servicio
-                  if (servidoresConServicio.isEmpty)
-                    const Text(
-                      'Sin servidores asignados',
-                      style: TextStyle(color: Color(0xFF8B949E), fontSize: 12),
-                    )
-                  else
+                  if (coincidentes.isNotEmpty) ...[
+                    const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
-                      children: servidoresConServicio
+                      children: coincidentes
                           .map((s) => _HostnameChip(hostname: s.hostname))
                           .toList(),
                     ),
+                  ],
                 ],
               ),
             ),

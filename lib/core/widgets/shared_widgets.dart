@@ -15,7 +15,7 @@ class AppLoadingWidget extends StatelessWidget {
           if (message != null) ...[
             const SizedBox(height: 16),
             Text(message!,
-                style: TextStyle(color: Colors.white.withOpacity(0.6))),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
           ]
         ],
       ),
@@ -38,11 +38,11 @@ class AppErrorWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.error_outline,
-                size: 56, color: Colors.redAccent.withOpacity(0.8)),
+                size: 56, color: Colors.redAccent.withValues(alpha: 0.8)),
             const SizedBox(height: 16),
             Text(message,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white.withOpacity(0.7))),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
             if (onRetry != null) ...[
               const SizedBox(height: 20),
               OutlinedButton.icon(
@@ -95,9 +95,9 @@ class StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(label,
           style: TextStyle(
@@ -200,7 +200,7 @@ class ServerImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
-      imageErrorBuilder: (_, __, ___) => _placeholder(),
+      imageErrorBuilder: (context, error, _) => _placeholder(),
     );
   }
 
@@ -233,8 +233,8 @@ class ServiceLogo extends StatelessWidget {
       width: size,
       height: size,
       fit: BoxFit.contain,
-      imageErrorBuilder: (_, __, ___) => Icon(Icons.settings_outlined,
-          size: size, color: const Color(0xFF8B949E)),
+      imageErrorBuilder: (context, error, _) =>
+          Icon(Icons.settings_outlined, size: size, color: const Color(0xFF8B949E)),
     );
   }
 }

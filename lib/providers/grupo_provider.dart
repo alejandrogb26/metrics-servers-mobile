@@ -18,7 +18,6 @@ class GrupoProvider with ChangeNotifier {
   Future<void> fetchAll() async {
     if (_loaded) return;
     _error = null;
-    notifyListeners();
     try {
       final results = await Future.wait([
         GrupoService.instance.getAll(),

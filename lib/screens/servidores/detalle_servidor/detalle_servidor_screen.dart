@@ -109,7 +109,7 @@ class DetalleServidorScreen extends StatelessWidget {
             backgroundColor: const Color(0xFF161B22),
             actions: [
               // Botón de métricas en la AppBar: accesible incluso con la
-              // cabecera colapsada, donde el botón inferior no es visible.
+              // cabecera colapsada.
               IconButton(
                 tooltip: 'Ver métricas',
                 icon: Container(
@@ -144,6 +144,8 @@ class DetalleServidorScreen extends StatelessWidget {
                 ),
               ),
               background: Stack(
+                // Obliga a todos tus hijos a estirarse y ocupar exactamente el mismo tamaño
+                // que tiene la cabecera (los 220 píxeles de alto)".
                 fit: StackFit.expand,
                 children: [
                   // Imagen del servidor: usa imagenUrl (URL completa).

@@ -112,26 +112,45 @@ class _MetricasScreenState extends State<MetricasScreen> {
   /// Etiquetas de los botones de rango. Índice sincronizado con [_ranges].
   final List<String> _rangeLabels = ['30 min', '1 h', '6 h', '24 h'];
 
-  /// Se llama tras initState y cuando una dependencia InheritedWidget cambia.
-  ///
-  /// Es el punto correcto para leer el argumento de ruta porque `ModalRoute.of`
-  /// requiere que la ruta ya esté registrada como dependencia, cosa que ocurre
-  /// tras la primera llamada a este método.
+  // ── CICLO DE VIDA: CONFIGURACIÓN DINÁMICA ───────────────────────────────────
+
+  /// Este método de Flutter se ejecuta automáticamente inmediatamente después de 'initState',
+  /// y también cada vez que un widget superior del que dependemos cambia sus datos.
   @override
   void didChangeDependencies() {
-    super.didChangeDependencies();
+    super
+        .didChangeDependencies(); // Buenas prácticas: invocar siempre al método padre.
 
+    // CONTROL DE FLUJO: Si ya se inicializó la pantalla en el pasado, ignoramos
+    // todo lo de adentro para no reiniciar el temporizador de métricas por error.
     if (!_initialized) {
+      // 1. EXTRACTOR DE ARGUMENTOS:
+      // Cuando viajas a esta pantalla usando el enrutador de Flutter (Navigator),
+      // extraemos el objeto 'Servidor' que se pasó como parámetro en la ruta.
       _servidor = ModalRoute.of(context)!.settings.arguments as Servidor;
-      // context.read: no necesita suscripción; solo se necesita la referencia
-      // para llamar a startPolling/stopPolling.
+
+      // 2. CONEXIÓN CON EL PROVIDER:
+      // Buscamos el 'MetricsProvider' en el árbol de widgets usando 'context.read'.
+      // Usamos '.read' en lugar de '.watch' porque solo queremos una referencia directa
+      // para ejecutar funciones (acciones), no queremos que esta pantalla entera se redibuje
+      // cada vez que el Provider cambie internamente.
       _metricsProvider = context.read<MetricsProvider>();
+
+      // Marcar como inicializado para cerrar con llave este bloque 'if' para siempre.
       _initialized = true;
 
-      // Inicia el polling tras el primer frame para evitar llamar a
-      // notifyListeners() durante la fase de build.
+      // 3. REGISTRO DEL DISPARO POST-RENDERIZADO (El Polling):
+      // Flutter prohíbe arrancar peticiones que actualicen el estado MIENTRAS se está
+      // dibujando la pantalla (fase de build).
+      // 'addPostFrameCallback' le dice a Flutter: "En cuanto termines de pintar este primer
+      // frame en la pantalla del usuario, ejecuta INMEDIATAMENTE este bloque de código".
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Verificación de seguridad: Si el usuario entró y salió de la pantalla
+        // ultra rápido antes de que se pintara el frame, cancelamos la operación.
         if (!mounted) return;
+
+        // DISPARO INICIAL: Le pedimos al Provider que empiece a descargar datos en bucle
+        // (polling) usando el ID del servidor actual y configurando el rango por defecto a 1 hora (60 min).
         _metricsProvider.startPolling(
           _servidor.serverId,
           rangeMinutes: 60, // Rango por defecto al entrar en la pantalla.
@@ -646,15 +665,47 @@ class _LineChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CONTROL DE EXCEPCIÓN: Si no hay datos históricos que pintar, se retorna un widget
+    // vacío sin dimensiones.
     if (points.isEmpty) return const SizedBox.shrink();
 
-    // FlSpot usa el índice como eje X, no el timestamp.
+    // MAPEADO DE DATOS: `fl_chart` requiere objetos [FlSpot]. Como no pintamos el tiempo
+    // real en el eje X, convertimos el índice posicional de la lista (0, 1, 2...) en la coordenada X.
     final spots = List.generate(
       points.length,
       (i) => FlSpot(i.toDouble(), points[i]),
     );
 
+    // CÁLCULO DE ESTADÍSTICAS:
+    // Se asume que el último elemento de la lista es el dato recolectado más reciente.
     final current = points.last;
+    // ── EXPLICACIÓN DETALLADA DEL CÁLCULO DE MÍNIMOS Y MÁXIMOS ─────────────────
+    //
+    // ¿Cómo funciona .reduce()?
+    // El método .reduce() fusiona todos los elementos de una lista en un único valor.
+    // Recorre la lista pasando dos variables a la función anónima:
+    //   - 'a' (Acumulador): Guarda el "ganador" de la comparación anterior.
+    //   - 'b' (Elemento actual): El elemento que se está evaluando en el ciclo.
+    //
+    // El Operador Ternario (condición ? si_verdadero : si_falso):
+    // Es un IF-ELSE compacto. 'a > b ? a : b' significa:
+    // "¿Es 'a' mayor que 'b'? Si es SI, mantén 'a'. Si es NO, cambia a 'b'".
+    //
+    // Ejemplo de Simulación Visual con la lista [15.0, 42.0, 8.0]:
+    //
+    // Para MAX (Buscando el mayor):
+    //   - Ronda 1: a = 15.0, b = 42.0 -> ¿15 > 42? NO. El acumulador 'a' pasa a ser 42.0
+    //   - Ronda 2: a = 42.0, b =  8.0 -> ¿42 >  8? SÍ. El acumulador 'a' se queda en 42.0
+    //   Resultado final guardado en max = 42.0
+    //
+    // Para MIN (Buscando el menor con 'a < b ? a : b'):
+    //   - Ronda 1: a = 15.0, b = 42.0 -> ¿15 < 42? SÍ. El acumulador 'a' se queda en 15.0
+    //   - Ronda 2: a = 15.0, b =  8.0 -> ¿15 <  8? NO. El acumulador 'a' pasa a ser 8.0
+    //   Resultado final guardado en min = 8.0
+    //
+    // NOTA DE SEGURIDAD: .reduce() arroja un error ('StateError') si la lista está vacía.
+    // Este cálculo es 100% seguro aquí gracias al "if (points.isEmpty)" de la línea superior.
+    // ───────────────────────────────────────────────────────────────────────────
     final max = points.reduce((a, b) => a > b ? a : b);
     final min = points.reduce((a, b) => a < b ? a : b);
 
@@ -664,8 +715,10 @@ class _LineChartCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── SECCIÓN 1: CABECERA (Etiqueta y Valor Actual) ────────────────
             Row(
               children: [
+                // Nombre de la métrica (Ej: "Uso de CPU")
                 Text(
                   label,
                   style: const TextStyle(
@@ -673,8 +726,8 @@ class _LineChartCard extends StatelessWidget {
                     fontSize: 12,
                   ),
                 ),
-                const Spacer(),
-                // Valor actual: siempre el último punto del rango.
+                const Spacer(), // Empuja el valor actual completamente hacia la derecha
+                // Valor actual más reciente destacado con el color de la métrica
                 Text(
                   '${current.toStringAsFixed(1)}$unit',
                   style: TextStyle(
@@ -686,17 +739,24 @@ class _LineChartCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            // ── SECCIÓN 2: CUERPO (La Gráfica de Líneas) ─────────────────────
             SizedBox(
-              height: 100,
+              height:
+                  100, // Altura fija y compacta ideal para vistas tipo Dashboard / Grid
               child: LineChart(
                 LineChartData(
+                  // Configuración de la Cuadrícula de Fondo
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine:
-                        false, // Solo líneas horizontales de cuadrícula.
+                        false, // Se ocultan las líneas verticales para limpiar el diseño
+                    // Define el estilo exclusivamente para las líneas horizontales de guía,
                     getDrawingHorizontalLine: (_) =>
                         FlLine(color: const Color(0xFF30363D), strokeWidth: 1),
                   ),
+                  // Configuración de los Títulos de los Ejes
+                  // Se desactivan por completo los cuatro ejes (izq, der, sup, inf).
+                  // Al ser una gráfica miniatura, ocultar los números maximiza el espacio útil del dibujo.
                   titlesData: const FlTitlesData(
                     // Se ocultan todos los títulos de ejes para maximizar el espacio
                     // de la gráfica dentro de la tarjeta compacta.
@@ -713,31 +773,42 @@ class _LineChartCard extends StatelessWidget {
                       sideTitles: SideTitles(showTitles: false),
                     ),
                   ),
+                  // Se elimina el borde exterior del lienzo de la gráfica
                   borderData: FlBorderData(show: false),
-                  minY: 0,
-                  // maxY fijo si se proporciona; dinámico con 20% de margen si no.
+                  // Escala del Eje Y
+                  minY: 0, // El piso de la gráfica siempre arranca en 0
+                  // LÓGICA DE TECHO VERTICAL:
+                  // Si se provee [maxY] (ej: 100 para porcentaje), se respeta.
+                  // Si es null, se multiplica el máximo por 1.2 (20% de margen de holgura superior)
+                  // y se suma 0.1 para evitar fallos visuales si el valor máximo del arreglo llegase a ser 0.
                   maxY: maxY ?? (max * 1.2 + 0.1),
+                  // Configuración de la Línea de Datos (Dataset)
                   lineBarsData: [
                     LineChartBarData(
-                      spots: spots,
-                      isCurved: true, // Interpolación suave entre puntos.
+                      spots: spots, // Asignación de los puntos calculados
+                      isCurved:
+                          true, // Habilita la interpolación de curvas suavizadas (Spline) en vez de líneas rectas
                       color: color,
-                      barWidth: 2,
+                      barWidth: 2, // Grosor estilizado de la línea
                       dotData: const FlDotData(show: false),
-                      // Relleno semitransparente bajo la línea.
+                      // Relleno cromático degradado/translúcido debajo de la línea curva
                       belowBarData: BarAreaData(
                         show: true,
+                        // Opacidad muy baja (12%) para que el fondo no sature la vista ni tape la cuadrícula
                         color: color.withValues(alpha: 0.12),
                       ),
                     ),
                   ],
+                  // Configuración de Interactividad (Gestos / Touch)
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
+                      // Color de fondo del globo/tooltip flotante
                       getTooltipColor: (_) => const Color(0xFF21262D),
+                      // Estructura y formato del texto dentro del tooltip al posicionarse sobre un punto
                       getTooltipItems: (spots) => spots
                           .map(
                             (s) => LineTooltipItem(
-                              '${s.y.toStringAsFixed(1)}$unit',
+                              '${s.y.toStringAsFixed(1)}$unit', // Muestra la coordenada Y formateada
                               TextStyle(color: color, fontSize: 12),
                             ),
                           )
@@ -748,7 +819,7 @@ class _LineChartCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            // Estadísticas de mínimo y máximo del rango visible.
+            // ── SECCIÓN 3: PIE DE PÁGINA (Estadísticas de Extremos) ──────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
